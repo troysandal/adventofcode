@@ -209,17 +209,17 @@ function parseFullScan(map) {
 /*
 Simulating the motion of these moons would produce the following:
 */
-(() => {
-    function compare(actual, expected) {
-        assert(actual.length === expected.length)
-        actual.forEach((_,ix) => {
-            assert(
-                asteroidsEqual(actual[ix], expected[ix]),
-                `${ix}: ${JSON.stringify(actual[ix].position)} !== ${JSON.stringify(expected[ix])}`
-            )
-        })
-    }
+function test_compareSystems(actual, expected) {
+    assert(actual.length === expected.length)
+    actual.forEach((_,ix) => {
+        assert(
+            asteroidsEqual(actual[ix], expected[ix]),
+            `${ix}: ${JSON.stringify(actual[ix].position)} !== ${JSON.stringify(expected[ix])}`
+        )
+    })
+}
 
+(() => {
     const steps = [
         //After 0 steps:
         `pos=<x=-1, y=  0, z= 2>, vel=<x= 0, y= 0, z= 0>
@@ -287,13 +287,18 @@ Simulating the motion of these moons would produce the following:
         pos=<x= 3, y=-6, z= 1>, vel=<x= 3, y= 2, z=-3>
         pos=<x= 2, y= 0, z= 4>, vel=<x= 1, y=-1, z=-1>`
     ].map(parseFullScan)
+    const expectedEnergy = 179
 
     let state = steps[0]
     for (let index = 1 ; index < steps.length; index++) {
         state = simulate(state)
-        compare(state, steps[index])
+        test_compareSystems(state, steps[index])
     }
-
+    const actualEnergy = systemEnergy(state)
+    assert(
+        expectedEnergy === actualEnergy,
+        `System energy ${actualEnergy}, expected ${expectedEnergy}`
+        )
 })();
 
 /*
@@ -306,86 +311,147 @@ pot: 3 + 6 + 1 = 10;   kin: 3 + 2 + 3 = 8;   total: 10 * 8 = 80
 pot: 2 + 0 + 4 =  6;   kin: 1 + 1 + 1 = 3;   total:  6 * 3 = 18
 Sum of total energy: 36 + 45 + 80 + 18 = 179
 In the above example, adding together the total energy for all moons after 10 steps produces the total energy in the system, 179.
+*/
+function totalEnergy(moon) {
+    const potential = moon.position.map(Math.abs).reduce((p,c) => p + c, 0)
+    const kinetic = moon.velocity.map(Math.abs).reduce((p,c) => p + c, 0)
+    return potential * kinetic
+}
+function systemEnergy(moons) {
+    return moons
+        .map((moon) => totalEnergy(moon))
+        .reduce((p,c) => p + c, 0)
+}
+(() => {
+    function test(map, expected) {
+        const moons = parseFullScan(map)
+        const actual = systemEnergy(moons)
+        assert(actual === expected, `${actual} !== ${expected}`)
+    }
+    test(`pos=<x= 2, y= 1, z=-3>, vel=<x=-3, y=-2, z= 1>
+    pos=<x= 1, y=-8, z= 0>, vel=<x=-1, y= 1, z= 3>
+    pos=<x= 3, y=-6, z= 1>, vel=<x= 3, y= 2, z=-3>
+    pos=<x= 2, y= 0, z= 4>, vel=<x= 1, y=-1, z=-1>`,179)
 
+    test(`pos=<x=  8, y=-12, z= -9>, vel=<x= -7, y=  3, z=  0>
+    pos=<x= 13, y= 16, z= -3>, vel=<x=  3, y=-11, z= -5>
+    pos=<x=-29, y=-11, z= -1>, vel=<x= -3, y=  7, z=  4>
+    pos=<x= 16, y=-13, z= 23>, vel=<x=  7, y=  1, z=  1>`, 1940)
+})();
+
+/*
 Here's a second example:
 
-<x=-8, y=-10, z=0>
-<x=5, y=5, z=10>
-<x=2, y=-7, z=3>
-<x=9, y=-8, z=-3>
-Every ten steps of simulation for 100 steps produces:
+*/
 
-After 0 steps:
-pos=<x= -8, y=-10, z=  0>, vel=<x=  0, y=  0, z=  0>
-pos=<x=  5, y=  5, z= 10>, vel=<x=  0, y=  0, z=  0>
-pos=<x=  2, y= -7, z=  3>, vel=<x=  0, y=  0, z=  0>
-pos=<x=  9, y= -8, z= -3>, vel=<x=  0, y=  0, z=  0>
+(() => {
+    const keyedSteps = {
+        // After 0 Steps:
+        0: `pos=<x= -8, y=-10, z=  0>, vel=<x=  0, y=  0, z=  0>
+        pos=<x=  5, y=  5, z= 10>, vel=<x=  0, y=  0, z=  0>
+        pos=<x=  2, y= -7, z=  3>, vel=<x=  0, y=  0, z=  0>
+        pos=<x=  9, y= -8, z= -3>, vel=<x=  0, y=  0, z=  0>`,
 
-After 10 steps:
-pos=<x= -9, y=-10, z=  1>, vel=<x= -2, y= -2, z= -1>
-pos=<x=  4, y= 10, z=  9>, vel=<x= -3, y=  7, z= -2>
-pos=<x=  8, y=-10, z= -3>, vel=<x=  5, y= -1, z= -2>
-pos=<x=  5, y=-10, z=  3>, vel=<x=  0, y= -4, z=  5>
+        // After 10 steps:
+        10: `pos=<x= -9, y=-10, z=  1>, vel=<x= -2, y= -2, z= -1>
+        pos=<x=  4, y= 10, z=  9>, vel=<x= -3, y=  7, z= -2>
+        pos=<x=  8, y=-10, z= -3>, vel=<x=  5, y= -1, z= -2>
+        pos=<x=  5, y=-10, z=  3>, vel=<x=  0, y= -4, z=  5>`,
 
-After 20 steps:
-pos=<x=-10, y=  3, z= -4>, vel=<x= -5, y=  2, z=  0>
-pos=<x=  5, y=-25, z=  6>, vel=<x=  1, y=  1, z= -4>
-pos=<x= 13, y=  1, z=  1>, vel=<x=  5, y= -2, z=  2>
-pos=<x=  0, y=  1, z=  7>, vel=<x= -1, y= -1, z=  2>
+        // After 20 steps:
+        20: `pos=<x=-10, y=  3, z= -4>, vel=<x= -5, y=  2, z=  0>
+        pos=<x=  5, y=-25, z=  6>, vel=<x=  1, y=  1, z= -4>
+        pos=<x= 13, y=  1, z=  1>, vel=<x=  5, y= -2, z=  2>
+        pos=<x=  0, y=  1, z=  7>, vel=<x= -1, y= -1, z=  2>`,
 
-After 30 steps:
-pos=<x= 15, y= -6, z= -9>, vel=<x= -5, y=  4, z=  0>
-pos=<x= -4, y=-11, z=  3>, vel=<x= -3, y=-10, z=  0>
-pos=<x=  0, y= -1, z= 11>, vel=<x=  7, y=  4, z=  3>
-pos=<x= -3, y= -2, z=  5>, vel=<x=  1, y=  2, z= -3>
+        // After 30 steps:
+        30: `pos=<x= 15, y= -6, z= -9>, vel=<x= -5, y=  4, z=  0>
+        pos=<x= -4, y=-11, z=  3>, vel=<x= -3, y=-10, z=  0>
+        pos=<x=  0, y= -1, z= 11>, vel=<x=  7, y=  4, z=  3>
+        pos=<x= -3, y= -2, z=  5>, vel=<x=  1, y=  2, z= -3>`,
 
-After 40 steps:
-pos=<x= 14, y=-12, z= -4>, vel=<x= 11, y=  3, z=  0>
-pos=<x= -1, y= 18, z=  8>, vel=<x= -5, y=  2, z=  3>
-pos=<x= -5, y=-14, z=  8>, vel=<x=  1, y= -2, z=  0>
-pos=<x=  0, y=-12, z= -2>, vel=<x= -7, y= -3, z= -3>
+        // After 40 steps:
+        40: `pos=<x= 14, y=-12, z= -4>, vel=<x= 11, y=  3, z=  0>
+        pos=<x= -1, y= 18, z=  8>, vel=<x= -5, y=  2, z=  3>
+        pos=<x= -5, y=-14, z=  8>, vel=<x=  1, y= -2, z=  0>
+        pos=<x=  0, y=-12, z= -2>, vel=<x= -7, y= -3, z= -3>`,
 
-After 50 steps:
-pos=<x=-23, y=  4, z=  1>, vel=<x= -7, y= -1, z=  2>
-pos=<x= 20, y=-31, z= 13>, vel=<x=  5, y=  3, z=  4>
-pos=<x= -4, y=  6, z=  1>, vel=<x= -1, y=  1, z= -3>
-pos=<x= 15, y=  1, z= -5>, vel=<x=  3, y= -3, z= -3>
+        // After 50 steps:
+        50: `pos=<x=-23, y=  4, z=  1>, vel=<x= -7, y= -1, z=  2>
+        pos=<x= 20, y=-31, z= 13>, vel=<x=  5, y=  3, z=  4>
+        pos=<x= -4, y=  6, z=  1>, vel=<x= -1, y=  1, z= -3>
+        pos=<x= 15, y=  1, z= -5>, vel=<x=  3, y= -3, z= -3>`,
 
-After 60 steps:
-pos=<x= 36, y=-10, z=  6>, vel=<x=  5, y=  0, z=  3>
-pos=<x=-18, y= 10, z=  9>, vel=<x= -3, y= -7, z=  5>
-pos=<x=  8, y=-12, z= -3>, vel=<x= -2, y=  1, z= -7>
-pos=<x=-18, y= -8, z= -2>, vel=<x=  0, y=  6, z= -1>
+        // After 60 steps:
+        60: `pos=<x= 36, y=-10, z=  6>, vel=<x=  5, y=  0, z=  3>
+        pos=<x=-18, y= 10, z=  9>, vel=<x= -3, y= -7, z=  5>
+        pos=<x=  8, y=-12, z= -3>, vel=<x= -2, y=  1, z= -7>
+        pos=<x=-18, y= -8, z= -2>, vel=<x=  0, y=  6, z= -1>`,
 
-After 70 steps:
-pos=<x=-33, y= -6, z=  5>, vel=<x= -5, y= -4, z=  7>
-pos=<x= 13, y= -9, z=  2>, vel=<x= -2, y= 11, z=  3>
-pos=<x= 11, y= -8, z=  2>, vel=<x=  8, y= -6, z= -7>
-pos=<x= 17, y=  3, z=  1>, vel=<x= -1, y= -1, z= -3>
+        // After 70 steps:
+        70: `pos=<x=-33, y= -6, z=  5>, vel=<x= -5, y= -4, z=  7>
+        pos=<x= 13, y= -9, z=  2>, vel=<x= -2, y= 11, z=  3>
+        pos=<x= 11, y= -8, z=  2>, vel=<x=  8, y= -6, z= -7>
+        pos=<x= 17, y=  3, z=  1>, vel=<x= -1, y= -1, z= -3>`,
 
-After 80 steps:
-pos=<x= 30, y= -8, z=  3>, vel=<x=  3, y=  3, z=  0>
-pos=<x= -2, y= -4, z=  0>, vel=<x=  4, y=-13, z=  2>
-pos=<x=-18, y= -7, z= 15>, vel=<x= -8, y=  2, z= -2>
-pos=<x= -2, y= -1, z= -8>, vel=<x=  1, y=  8, z=  0>
+        // After 80 steps:
+        80: `pos=<x= 30, y= -8, z=  3>, vel=<x=  3, y=  3, z=  0>
+        pos=<x= -2, y= -4, z=  0>, vel=<x=  4, y=-13, z=  2>
+        pos=<x=-18, y= -7, z= 15>, vel=<x= -8, y=  2, z= -2>
+        pos=<x= -2, y= -1, z= -8>, vel=<x=  1, y=  8, z=  0>`,
 
-After 90 steps:
-pos=<x=-25, y= -1, z=  4>, vel=<x=  1, y= -3, z=  4>
-pos=<x=  2, y= -9, z=  0>, vel=<x= -3, y= 13, z= -1>
-pos=<x= 32, y= -8, z= 14>, vel=<x=  5, y= -4, z=  6>
-pos=<x= -1, y= -2, z= -8>, vel=<x= -3, y= -6, z= -9>
+        // After 90 steps:
+        90: `pos=<x=-25, y= -1, z=  4>, vel=<x=  1, y= -3, z=  4>
+        pos=<x=  2, y= -9, z=  0>, vel=<x= -3, y= 13, z= -1>
+        pos=<x= 32, y= -8, z= 14>, vel=<x=  5, y= -4, z=  6>
+        pos=<x= -1, y= -2, z= -8>, vel=<x= -3, y= -6, z= -9>`,
 
-After 100 steps:
-pos=<x=  8, y=-12, z= -9>, vel=<x= -7, y=  3, z=  0>
-pos=<x= 13, y= 16, z= -3>, vel=<x=  3, y=-11, z= -5>
-pos=<x=-29, y=-11, z= -1>, vel=<x= -3, y=  7, z=  4>
-pos=<x= 16, y=-13, z= 23>, vel=<x=  7, y=  1, z=  1>
+        // After 100 steps:
+        100: `pos=<x=  8, y=-12, z= -9>, vel=<x= -7, y=  3, z=  0>
+        pos=<x= 13, y= 16, z= -3>, vel=<x=  3, y=-11, z= -5>
+        pos=<x=-29, y=-11, z= -1>, vel=<x= -3, y=  7, z=  4>
+        pos=<x= 16, y=-13, z= 23>, vel=<x=  7, y=  1, z=  1>`,
+    }
+    const steps = []
+    let MAX_STEP = 0
+    Object.keys(keyedSteps).map((key) => {
+        steps[key] = parseFullScan(keyedSteps[key])
+        MAX_STEP = Math.max(parseInt(key))
+    })
 
-Energy after 100 steps:
-pot:  8 + 12 +  9 = 29;   kin: 7 +  3 + 0 = 10;   total: 29 * 10 = 290
-pot: 13 + 16 +  3 = 32;   kin: 3 + 11 + 5 = 19;   total: 32 * 19 = 608
-pot: 29 + 11 +  1 = 41;   kin: 3 +  7 + 4 = 14;   total: 41 * 14 = 574
-pot: 16 + 13 + 23 = 52;   kin: 7 +  1 + 1 =  9;   total: 52 *  9 = 468
-Sum of total energy: 290 + 608 + 574 + 468 = 1940
+    let state = steps[0]
+    let actualEnergy
+    for (let index = 1 ; index <= 1000 ; index++) {
+        state = simulate(state)
+        actualEnergy = systemEnergy(state)
+        if (index === 100) {
+            const expectedEnergy = 1940
+            assert(
+                expectedEnergy === actualEnergy,
+                `System energy ${actualEnergy}, expected ${expectedEnergy}`
+                )
+        }
+        if (steps[index]) {
+            test_compareSystems(state, steps[index])
+        }
+    }
+    console.log(actualEnergy)
+})();
+
+(() => {
+    let state = parseSmallScan(`<x=14, y=2, z=8>
+        <x=7, y=4, z=10>
+        <x=1, y=17, z=16>
+        <x=-4, y=-1, z=1>`)
+
+    for (let index = 0 ; index < 1000 ; index++) {
+        state = simulate(state)
+    }
+    const energy = systemEnergy(state)
+    console.log(`Part One Answer is ${energy}`)
+    assert(9139 === energy, `You broke part 1`)
+
+})();
+/*
 What is the total energy in the system after simulating the moons given in your scan for 1000 steps?
 */
