@@ -82,36 +82,34 @@ export const STATUS_HALT = -1
 export const STATUS_YIELD = -2
 
 const INSTRUCTIONS = {
-    1: { 
+    1: {
         name: 'ADD',
         length: 4,
         run: (state) => {
-            const {ip} = state
             const a = fetch(state, 1)
             const b = fetch(state, 2)
             setParam(state, 3, a + b)
             state.ip += 4
         },
     },
-    2: { 
+    2: {
         name: 'MUL',
         length: 4,
         run: (state) => {
-            const {ip} = state
             const a = fetch(state, 1)
             const b = fetch(state, 2)
             setParam(state, 3, a * b)
             state.ip += 4
         }
     },
-    3: { 
+    3: {
         name: 'INP',
         length: 2,
         run: (state) => {
-            const {memory, ip, input} = state
+            const {input} = state
             let value
             if (typeof input === "function") {
-                value = input()
+                value = input(state)
             } else {
                 if (!input.length) {
                     state.status = STATUS_YIELD
@@ -123,21 +121,24 @@ const INSTRUCTIONS = {
             state.ip += 2
         }
     },
-    4: { 
+    4: {
         name: 'OUT',
         length: 2,
         run: (state) => {
-            const {ip, output} = state
+            const {output} = state
             const value = fetch(state, 1)
-            output.push(value)
+            if (typeof output === "function") {
+                output(value, state)
+            }else {
+                output.push(value)
+            }
             state.ip += 2
         }
     },
-    5: { 
+    5: {
         name: 'JMPT',
         length: 3,
         run: (state) => {
-            let {ip} = state
             const value = fetch(state, 1)
             if (value) {
                 state.ip = fetch(state, 2)
@@ -146,11 +147,10 @@ const INSTRUCTIONS = {
             }
         }
     },
-    6: { 
+    6: {
         name: 'JMPF',
         length: 3,
         run: (state) => {
-            let {ip} = state
             const value = fetch(state, 1)
             if (!value) {
                 state.ip = fetch(state, 2)
@@ -159,11 +159,10 @@ const INSTRUCTIONS = {
             }
         }
     },
-    7: { 
+    7: {
         name: 'LT',
         length: 4,
         run: (state) => {
-            const {ip} = state
             const a = fetch(state, 1)
             const b = fetch(state, 2)
             let result = 0
@@ -174,11 +173,10 @@ const INSTRUCTIONS = {
             state.ip += 4
         }
     },
-    8: { 
+    8: {
         name: 'EQ',
         length: 4,
         run: (state) => {
-            const {ip} = state
             const a = fetch(state, 1)
             const b = fetch(state, 2)
             let result = 0
@@ -189,7 +187,7 @@ const INSTRUCTIONS = {
             state.ip += 4
         }
     },
-    9: { 
+    9: {
         name: 'SETRB',
         length: 2,
         run: (state) => {
@@ -197,7 +195,7 @@ const INSTRUCTIONS = {
             state.ip += 2
         }
     },
-    99: { 
+    99: {
         name: 'END',
         length: 1,
         run: (state) => {
@@ -210,8 +208,8 @@ export function runProgram(state) {
     assert(state.memory, 'NO MEMORY!')
     state = Object.assign(
         {
-            memory:[99], input:[], output:[], 
-            ip:0, rb:0, 
+            memory:[99], input:[], output:[],
+            ip:0, rb:0,
             status:STATUS_RUNNING, name:'?', print:false},
         state
     )
@@ -219,7 +217,6 @@ export function runProgram(state) {
     state.status = STATUS_RUNNING
 
     if (state.print) console.log(`running program ${state.name} input=[${state.input}]`)
-
     while (state.status === STATUS_RUNNING) {
         const opcode = state.memory[state.ip]
         const instruction = INSTRUCTIONS[opcode % 100]
@@ -293,7 +290,7 @@ function arraysEqual(a1,a2) {
     return JSON.stringify(a1)==JSON.stringify(a2);
 }
 
-export function runTests() {    
+export function runTests() {
     // Basics
     testProgram([99], [99])
     testProgram([1101,100,-1,4,0], [1101,100,-1,4,99])
@@ -302,25 +299,25 @@ export function runTests() {
     testProgram([  9, 7, 22201, 0, 1, 0, 99, 7 ,1], [  9, 7, 22201, 0, 1, 0, 99, 8 ,1])
     testProgram([109, 7, 22201, 0, 1, 0, 99, 1 ,1], [109, 7, 22201, 0, 1, 0, 99, 2 ,1])
     testProgram([209, 7, 22201, 0, 1, 0, 99, 7 ,1], [209, 7, 22201, 0, 1, 0, 99, 8 ,1])
-    // duplicate 
+    // duplicate
     testProgram(
-        [109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99], 
+        [109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99],
         null,
         [],
         [109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99])
     testProgram(
-        [1102,34915192,34915192,7,4,7,99,0], 
+        [1102,34915192,34915192,7,4,7,99,0],
         null,
         [],
         [1219070632396864]
     )
     testProgram(
-        [104,1125899906842624,99], 
+        [104,1125899906842624,99],
         null,
         [],
         [1125899906842624]
     )
-    
+
     // Resume
     //             [0,1, 2,3, 4,5, 6, 7, 8,9, 10,11,12]
     const resume = [3,11,3,12,1,11,12,11,4,11,99,-1,-1]

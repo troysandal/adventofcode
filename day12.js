@@ -14,15 +14,11 @@ Simulate the motion of the moons in time steps. Within each time step, first upd
 */
 
 function simulate(moons) {
-    let newMoons = gravity(moons)
-    newMoons = velocity(newMoons)
-    return newMoons
+    return velocity(gravity(moons))
 }
 
 /*
 To apply gravity, consider every pair of moons.
-
-allPairs([A,B,C,D] => [AB,AC,AD,BC,BD,CD]
 */
 
 function pairs(array, visitor) {
@@ -49,7 +45,6 @@ function pairs(array, visitor) {
 
 /*
 To apply gravity, consider every pair of moons. On each axis (x, y, and z), the velocity of each moon changes by exactly +1 or -1 to pull the moons together. For example, if Ganymede has an x position of 3, and Callisto has a x position of 5, then Ganymede's x velocity changes by +1 (because 5 > 3) and Callisto's x velocity changes by -1 (because 3 < 5). However, if the positions on a given axis are the same, the velocity on that axis does not change for that pair of moons.
-
 */
 function gravity(moons) {
     function pull(positionA, positionB) {
@@ -134,6 +129,10 @@ function velocity(moons) {
     testVelocity({position:[1,2,3], velocity:[-2,0,3]}, [-1,2,6])
 })()
 
+function printSystem(moons) {
+    // moons.forEach((moon) => console.log(JSON.stringify(moon)))
+    moons.map(JSON.stringify).forEach((moon) => console.log(moon))
+}
 
 function asteroidsEqual(a,b) {
     return arraysEqual(a.position, b.position) &&
@@ -209,12 +208,20 @@ function parseFullScan(map) {
 /*
 Simulating the motion of these moons would produce the following:
 */
+function systemsEqual(systemA, systemB) {
+    if (systemA.length === systemB.length) {
+        return !systemA
+            .map((moon, ix) => asteroidsEqual(systemA[ix], systemB[ix]))
+            .some((equal) => !equal)
+    }
+}
+
 function test_compareSystems(actual, expected) {
     assert(actual.length === expected.length)
     actual.forEach((_,ix) => {
         assert(
             asteroidsEqual(actual[ix], expected[ix]),
-            `${ix}: ${JSON.stringify(actual[ix].position)} !== ${JSON.stringify(expected[ix])}`
+            `${ix}: ${JSON.stringify(actual[ix])} !== ${JSON.stringify(expected[ix])}`
         )
     })
 }
@@ -452,6 +459,58 @@ Here's a second example:
     assert(9139 === energy, `You broke part 1`)
 
 })();
-/*
-What is the total energy in the system after simulating the moons given in your scan for 1000 steps?
-*/
+
+// Part II
+
+(() => {
+    let state = parseSmallScan(`<x=-1, y=0, z=2>
+    <x=2, y=-10, z=-7>
+    <x=4, y=-8, z=8>
+    <x=3, y=5, z=-1>`)
+
+    function hash64(str) {
+        var i = str.length
+        var hash1 = 5381
+        var hash2 = 52711
+
+        while (i--) {
+          const char = str.charCodeAt(i)
+          hash1 = (hash1 * 33) ^ char
+          hash2 = (hash2 * 33) ^ char
+        }
+
+        return (hash1 >>> 0) * 4096 + (hash2 >>> 0)
+    }
+
+    function test(smallScan, expected) {
+        let state = parseSmallScan(smallScan)
+        const hashesFound = {}
+        let step = 0
+
+        while (true) {
+            const hash = hash64(JSON.stringify(state))
+            if (hashesFound[hash] !== undefined) {
+                console.log(`Step ${step} has same hash as ${hashesFound[hash]}`)
+                break;
+            }
+            hashesFound[hash] = step
+            if (0 === (step % 100000)) {
+                console.log(`${step}: Found ${Object.keys(hashesFound).length} energies so far...`)
+            }
+
+            state = simulate(state)
+            step++
+        }
+        assert(expected === step, `${expected} !== ${step}`)
+    }
+
+    test(`<x=-1, y=0, z=2>
+        <x=2, y=-10, z=-7>
+        <x=4, y=-8, z=8>
+        <x=3, y=5, z=-1>`, 2772)
+
+    test(`<x=-8, y=-10, z=0>
+        <x=5, y=5, z=10>
+        <x=2, y=-7, z=3>
+        <x=9, y=-8, z=-3>`, 4686774924)
+})();
