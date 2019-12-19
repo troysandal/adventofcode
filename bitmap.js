@@ -14,24 +14,44 @@ export function Bitmap() {
         this.map[posStr([x, y])] = color
     }
 
+    this.setPt = function(pt, color) {
+        this.paint(pt.x, pt.y, color)
+    }
+
     this.panelsPainted = function () {
         return Object.keys(this.map).length
     }
 
+    this.getPt = function (pt) {
+        return this.map[posStr([pt.x, pt.y])]
+    }
     this.get = function (x, y) {
         return this.map[posStr([x, y])]
-    }
+    };
+    this.width = function() { return 1 + this.dim.r - this.dim.l };
+    this.height = function() { return 1 + this.dim.b - this.dim.t }
 
-    this.print = function(print) {
+    this.visit = function(cb) {
+        for (let row = this.dim.t; row <= this.dim.b; row++) {
+            for (let col = this.dim.l; col <= this.dim.r; col++) {
+                let v = this.get(col, row)
+                cb(col, row, v)
+            }
+        }
+    }
+    this.print = function(print = console.log) {
+        print('+' + '-'.repeat(this.width()) + '+')
         for (let row = this.dim.t; row <= this.dim.b; row++) {
             const pixels = []
             for (let col = this.dim.l; col <= this.dim.r; col++) {
                 let v = this.get(col, row)
                 if (v === undefined) v = ' '
+                v = v.pixel || v
                 pixels.push(''+v)
             }
-            print(pixels.join(''))
+            print(`|${pixels.join('')}|`)
         }
+        print('+' + '-'.repeat(this.width()) + '+')
     }
 }
 
