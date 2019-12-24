@@ -181,20 +181,71 @@ function onMoveResult(status) {
 function findDistance() {
     map.print()
     const {offset, grid} = bitmapToAStarGrid(map)
-    for (let r = 0 ; r < grid.length ; r++) { 
-        console.log(grid[r].map((v) => v ? '1' : ' ').join(''))
-    }
+    printGrid(grid)
 
     var graph = new AStar.Graph(grid);
     var start = graph.grid[0 - offset.y][0 - offset.x];
     var end = graph.grid[oxyPos.y - offset.y][oxyPos.x - offset.x];
     var astar = AStar.astar.search(graph, start, end);
     astar.forEach((pt) => grid[pt.y][pt.x] = 2)
+    printGrid(grid)
+
+    console.log(`Part One Answer ${astar.length}`)
+    assert(294 === astar.length, 'Part One Not 294 :(')
+    part2()
+}
+
+function printGrid(grid) {
     for (let r = 0 ; r < grid.length ; r++) { 
         console.log(grid[r].map((v) => v ? (v === 1 ? '1' : '@') : ' ').join(''))
     }
-    console.log(`Part One Answer ${astar.length}`)
-    assert(294 === astar.length, 'Part One Not 294 :(')
+}
+
+function part2() {
+    // 0 => Wall
+    // 1 => unoxygenated room
+    // 2 => oxygenated
+    const {offset, grid} = bitmapToAStarGrid(map)
+    let summary
+    let startPos = {y:[oxyPos.y - offset.y], x:[oxyPos.x - offset.x]}
+    grid[startPos.y][startPos.x] = 2
+
+    function updateSummary() {
+        summary = { 0: 0, 1: 0, 2: 0 }
+        for (let r = 0 ; r < grid.length ; r++) { 
+            for (let c = 0 ; c < grid[r].length ; c++) {
+                summary[grid[r][c]] ++
+            }
+        }
+    }
+    function canHaveOxy(pos) {
+        return grid[pos[0]][[pos[1]]] === 1
+    }
+    function oxygenate() {
+        let newOxyCells = []
+        for (let r = 0 ; r < grid.length ; r++) { 
+            for (let c = 0 ; c < grid[r].length ; c++) {
+                if (grid[r][c] === 2) {
+                    newOxyCells = [
+                        ...newOxyCells, 
+                        ...[[r + 1, c], [r - 1, c], [r, c + 1], [r, c - 1]].filter(canHaveOxy)
+                    ]
+                }
+            }
+        }
+        newOxyCells.forEach((pos) => grid[pos[0]][pos[1]] = 2)
+    }
+    let minute = 0
+    updateSummary()
+    while (summary[1]) {
+        oxygenate()
+        minute++
+        updateSummary()
+    }
+    // 1st Try : 385  <-- TOO LOW
+    // 2nd Try : 388  Had start coord backwards
+    console.log(`Part Two Answer ${minute}`)
+    assert(388 === minute, 'Wrong Answer')
     process.exit()
 }
 
