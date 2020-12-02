@@ -26,30 +26,30 @@ const example = [
 
 // Pair Generation
 
-function pairs2(array, visitor) {
-  const allPairs = array.map((v, index, array) => {
-    const next = array.slice(index + 1)
-    return next.map((n) => [v, n])
-  }).flat()
+function generatePairs(array, visitor) {
   if (visitor) {
-    allPairs.forEach((pair) => visitor(pair))
-  }
-  return allPairs
-}
-
-function pairs(array, visitor) {
     for (let leftIx = 0 ; leftIx < (array.length - 1) ; leftIx++) {
         for (let rightIx = leftIx + 1; rightIx < array.length ; rightIx++) {
-            visitor([array[leftIx], array[rightIx]], leftIx, rightIx)
+          const pair = [array[leftIx], array[rightIx]]
+          const result = visitor(pair)
+          if (result) {
+            return result
+          }
         }
     }
   }
+}
+
+function pairs(array) {
+  const result = []
+  generatePairs(array, (pair) => { result.push(pair) })
+  return result
+}
 
 
 (() => {
     function testPairs(input, expected) {
-        const actual = []
-        pairs2(input, (pair) => actual.push(pair))
+        const actual = pairs(input)
         assert(arraysEqual(actual, expected))
     }
     testPairs(['a'], [])
@@ -58,7 +58,7 @@ function pairs(array, visitor) {
         ['a','b','c','d'],
         [['a','b'], ['a','c'], ['a','d'], ['b','c'], ['b','d'], ['c','d']]
     )
-})()
+})();
 
 // Part 1 - Expense Report Fix
 
@@ -71,9 +71,16 @@ testExpense(example, 514579)
 
 function findExpensesThatSumTo(input, sum) {
     let answer = 0
-    const multiples = pairs2(input, (pair) => {
+    // return generatePairs(input, (pair) => {
+    //   if (sum === (pair[0] + pair[1])) {
+    //     return pair[0] * pair[1]
+    //   }
+    // })
+    const allPairs = pairs(input)
+    allPairs.some((pair) => {
       if (sum === (pair[0] + pair[1])) {
         answer = pair[0] * pair[1]
+        return answer
       }
     })
     return answer
@@ -281,7 +288,6 @@ const actualExpenses = [1509,
   1864,
   1702]
 
-// right answer = 444019
 const part1Answer = findExpensesThatSumTo(actualExpenses, 2020)
 assert(part1Answer === 444019, "You broke part 1")
 console.log(`Part 1 Answer is ${part1Answer}`)
@@ -291,16 +297,22 @@ console.log(`Part 1 Answer is ${part1Answer}`)
 console.log("")
 console.log("Part 2")
 
-function triplets(array, visitor) {
-  const result = []
-  for (let i = 0 ; i < array.length - 2 ; i++) {
-    for (let j = i + 1 ; j < array.length - 1 ; j++) {
-      for (let k = j + 1 ; k < array.length ; k++) {
-        const triplet = [array[i], array[j], array[k]]
-        result.push(triplet)
+function generateTriplets(array, visitor) {
+  if (visitor) {
+    for (let i = 0 ; i < array.length - 2 ; i++) {
+      for (let j = i + 1 ; j < array.length - 1 ; j++) {
+        for (let k = j + 1 ; k < array.length ; k++) {
+          const triplet = [array[i], array[j], array[k]]
+          visitor(triplet)
+        }
       }
     }
   }
+}
+
+function triplets(array, visitor) {
+  const result = []
+  generateTriplets(array, (triplet) => {result.push(triplet)})
 
   if (visitor) {
     result.some((pair) => visitor(pair))
@@ -311,8 +323,7 @@ function triplets(array, visitor) {
 
 (() => {
     function testTriplets(input, expected) {
-        const actual = []
-        triplets(input, (pair) => {actual.push(pair)})
+        const actual = triplets(input)
         assert(arraysEqual(actual, expected), `Input = ${input}\nExpected ${JSON.stringify(expected)} !== ${JSON.stringify(actual)}`)
     }
     testTriplets([1], [])
@@ -363,8 +374,6 @@ function findExpenseTripletsThatSumTo(input, sum) {
     return answer
   }
 
-// TOO HIGH : 4864641768
-// right answer: 29212176
 const part2Answer = findExpenseTripletsThatSumTo(actualExpenses, 2020)
 console.assert(part2Answer === 29212176, "You broke part 2")
 console.log(`Part 2 Answer is ${part2Answer}`)
