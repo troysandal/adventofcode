@@ -1057,7 +1057,7 @@ const puzzleInput = [
 ]
 
 
-function parsePolicyString(policyString) {
+function parseOldPolicyString(policyString) {
     const [range, character] = policyString.split(' ')
     const [min, max] = range.split('-')
 
@@ -1070,29 +1070,29 @@ function parsePolicyString(policyString) {
 
 function parseExample(example) {
     const split = example.split(':')
-    console.assert(split.length === 2)
+    assert(split.length === 2)
     return {
         policyString: split[0].trim(),
         password: split[1].trim()
     }
 }
 
-function testPolicy(policy, expected) {
-    console.assert(policy.min >= 0)
-    console.assert(policy.max >= 0)
-    console.assert(policy.min < policy.max)
-    console.assert(policy.character.length === 1)
-    console.assert(policy.character >= 'a')
-    console.assert(policy.character <= 'z')
+function testOldPolicy(policy, expected) {
+    assert(policy.min >= 0)
+    assert(policy.max >= 0)
+    assert(policy.min < policy.max)
+    assert(policy.character.length === 1)
+    assert(policy.character >= 'a')
+    assert(policy.character <= 'z')
 
     if (expected) {
-        console.assert(
+        assert(
             policy.min === expected.min,
             `'expected min ${expected.min} !== ${policy.min}`)
-        console.assert(
+        assert(
             policy.max === expected.max,
             `expected max ${expected.max} !== ${policy.max}`)
-        console.assert(
+        assert(
             policy.character === expected.character,
             `expected character ${expected.character} !== ${policy.character}`)
     }
@@ -1107,7 +1107,7 @@ function countChar(pattern, char) {
 function testCountChar(pattern, char, expect) {
     const actual = countChar(pattern, char)
 
-    console.assert(actual === expect, `Expect ${expect} !== ${actual} '${pattern}', ${char}`)
+    assert(actual === expect, `Expect ${expect} !== ${actual} '${pattern}', ${char}`)
 }
 
 testCountChar('sdf', 'a', 0)
@@ -1116,28 +1116,39 @@ testCountChar('asdaf', 'a', 2)
 testCountChar('aasdf', 'a', 2)
 testCountChar('aasdfaa', 'a', 4)
 
-function isPasswordValid(policy, password) {
+function isOldPasswordValid(policy, password) {
     const count = countChar(password, policy.character)
     return count >= policy.min && count <= policy.max
 }
 
-part1TestInput.forEach((test) => {
-    const { policyString, password } = parseExample(test.example)
-    const policy = parsePolicyString(policyString)
-    testPolicy(policy, test.expectedPolicy)
 
-    const actual = isPasswordValid(policy, password)
-    console.assert(actual === test.valid, `Password ${password} invalid '${policyString}'`)
-})
+function testExampleInput(examples, policyManager) {
+    for (let test of examples) {
+        const { policyString, password } = parseExample(test.example)
+        const policy = policyManager.parse(policyString)
+        policyManager.test(policy, test.expectedPolicy)
 
-function validPasswords(examples) {
+        const actual = policyManager.validPassword(policy, password)
+        assert(actual === test.valid, `Password ${password} invalid '${policyString}'`)
+    }
+}
+
+const oldPolicy = {
+    parse: parseOldPolicyString,
+    validPassword: isOldPasswordValid,
+    test: testOldPolicy
+}
+
+testExampleInput(part1TestInput, oldPolicy)
+
+function validPasswords(examples, policyManager) {
     let count = 0
 
     examples.forEach((example) => {
         const { policyString, password } = parseExample(example)
-        const policy = parsePolicyString(policyString)
+        const policy = policyManager.parse(policyString)
 
-        if (isPasswordValid(policy, password)) {
+        if (policyManager.validPassword(policy, password)) {
             count++
         }
     })
@@ -1145,8 +1156,123 @@ function validPasswords(examples) {
     return count
 }
 
+
 // 1st: 319 (too low)
 // 2nd: 591 correct
-const part1Answer = validPasswords(puzzleInput)
+// const part1Answer = validPasswords(puzzleInput, oldPolicy)
+// console.log(`Part 1 Answer = ${part1Answer}`)
+// assert(591 === part1Answer)
+
+const part1ExpectedAnswer = 591
+const part1Answer = validPasswords(puzzleInput, oldPolicy)
 console.log(`Part 1 Answer = ${part1Answer}`)
-console.assert(591 === part1Answer)
+assert(part1ExpectedAnswer === part1Answer, `Part 1 Answer is Broken - Expected ${part1ExpectedAnswer} !== ${part1Answer}`)
+
+
+// Part 2
+
+/*
+While it appears you validated the passwords correctly, they don't seem to be
+what the Official Toboggan Corporate Authentication System is expecting.
+
+The shopkeeper suddenly realizes that he just accidentally explained the
+password policy rules from his old job at the sled rental place down the street!
+The Official Toboggan Corporate Policy actually works a little differently.
+
+Each policy actually describes two positions in the password, where 1 means the
+first character, 2 means the second character, and so on. (Be careful; Toboggan
+Corporate Policies have no concept of "index zero"!) Exactly one of these
+positions must contain the given letter. Other occurrences of the letter are
+irrelevant for the purposes of policy enforcement.
+
+Given the same example list from above:
+
+    1-3 a: abcde is valid: position 1 contains a and position 3 does not.
+    1-3 b: cdefg is invalid: neither position 1 nor position 3 contains b.
+    2-9 c: ccccccccc is invalid: both position 2 and position 9 contain c.
+
+*/
+
+const part2TestInput = [
+    {
+        example: "1-3 a: abcde",
+        valid: true,
+        expectedPolicy: {first: 1, second: 3, character: 'a'}
+    },
+    {
+        example: "1-3 b: cdefg",
+        valid: false,
+        expectedPolicy: {first: 1, second: 3, character: 'b'}
+    },
+    {
+        example: "2-9 c: ccccccccc",
+        valid: false,
+        expectedPolicy: {first: 2, second: 9, character: 'c'}
+    },
+]
+
+/*
+    How many passwords are valid according to the new interpretation of the
+policies?
+*/
+
+
+function parseNewPolicyString(policyString) {
+    const [range, character] = policyString.split(' ')
+    const [first, second] = range.split('-')
+
+    return {
+        first: parseInt(first, 10),
+        second: parseInt(second, 10),
+        character: character.trim(),
+    }
+}
+
+function testNewPolicy(policy, expected) {
+    assert(policy.first >= 0)
+    assert(policy.second >= 0)
+    assert(policy.first < policy.second)
+    assert(policy.character.length === 1)
+    assert(policy.character >= 'a')
+    assert(policy.character <= 'z')
+
+    if (expected) {
+        assert(
+            policy.first === expected.first,
+            `'expected first ${expected.first} !== ${policy.first}`)
+        assert(
+            policy.second === expected.second,
+            `expected second ${expected.second} !== ${policy.second}`)
+        assert(
+            policy.character === expected.character,
+            `expected character ${expected.character} !== ${policy.character}`)
+    }
+
+    return false
+}
+
+function isNewPasswordValid(policy, password) {
+    const firstChar = password[policy.first  - 1]
+    const secondChar = password[policy.second  - 1]
+
+    const notSameChar = firstChar !== secondChar
+    const oneIsChar = (firstChar === policy.character) || (secondChar === policy.character)
+
+    return notSameChar && oneIsChar
+}
+
+const newPolicy = {
+    parse: parseNewPolicyString,
+    validPassword: isNewPasswordValid,
+    test: testNewPolicy
+}
+
+testExampleInput(part2TestInput, newPolicy)
+
+// 1st try - 157 (too low)
+// 2nd try - 335
+const part2ExpectedAnswer = 335
+const part2Answer = validPasswords(puzzleInput, newPolicy)
+console.log(`Part 2 Answer = ${part2Answer}`)
+assert(part2ExpectedAnswer === part2Answer, `Part 2 Answer is Broken - Expected ${part2ExpectedAnswer} !== ${part2Answer}`)
+
