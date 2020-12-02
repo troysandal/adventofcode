@@ -70,20 +70,13 @@ function testExpense(input, expected) {
 testExpense(example, 514579)
 
 function findExpensesThatSumTo(input, sum) {
-    let answer = 0
-    // return generatePairs(input, (pair) => {
-    //   if (sum === (pair[0] + pair[1])) {
-    //     return pair[0] * pair[1]
-    //   }
-    // })
-    const allPairs = pairs(input)
-    allPairs.some((pair) => {
-      if (sum === (pair[0] + pair[1])) {
-        answer = pair[0] * pair[1]
-        return answer
+    return generatePairs(input, (pair) => {
+      const accum = pair[0] + pair[1]
+
+      if (sum === accum) {
+        return pair[0] * pair[1]
       }
     })
-    return answer
   }
 
 
@@ -292,7 +285,6 @@ const part1Answer = findExpensesThatSumTo(actualExpenses, 2020)
 assert(part1Answer === 444019, "You broke part 1")
 console.log(`Part 1 Answer is ${part1Answer}`)
 
-
 // Part 2 - Triplets
 console.log("")
 console.log("Part 2")
@@ -303,21 +295,19 @@ function generateTriplets(array, visitor) {
       for (let j = i + 1 ; j < array.length - 1 ; j++) {
         for (let k = j + 1 ; k < array.length ; k++) {
           const triplet = [array[i], array[j], array[k]]
-          visitor(triplet)
+          const rc = visitor(triplet)
+          if (rc) {
+            return rc
+          }
         }
       }
     }
   }
 }
 
-function triplets(array, visitor) {
+function triplets(array) {
   const result = []
   generateTriplets(array, (triplet) => {result.push(triplet)})
-
-  if (visitor) {
-    result.some((pair) => visitor(pair))
-  }
-
   return result
 }
 
@@ -359,19 +349,14 @@ testExpenseTriplets(example, 241861950)
 
 
 function findExpenseTripletsThatSumTo(input, sum) {
-    let answer = 0
+    return generateTriplets(input, (triple) => {
+      const accum = triple[0] + triple[1] + triple[2]
 
-    triplets(input, (triple) => {
-        const accum = triple[0] + triple[1] + triple[2]
-
-        if (sum === accum) {
-            answer = triple[0] * triple[1] * triple[2]
-        }
-        if (answer) {
-            return true
-        }
+      if (sum === accum) {
+          return triple[0] * triple[1] * triple[2]
+      }
     })
-    return answer
+
   }
 
 const part2Answer = findExpenseTripletsThatSumTo(actualExpenses, 2020)
