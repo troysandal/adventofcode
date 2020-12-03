@@ -1,4 +1,4 @@
-import {assert, arraysEqual} from './utils.js'
+import {assert, arraysEqual} from '../2019/util.js'
 
 /* day1.js
 

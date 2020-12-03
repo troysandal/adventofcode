@@ -1,4 +1,4 @@
-import {assert} from './utils.js'
+import {assert} from '../2019/util.js'
 
 /*
 Your flight departs in a few days from the coastal airport; the easiest way down

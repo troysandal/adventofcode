@@ -11,8 +11,8 @@
       "skipFiles": [
         "<node_internals>/**"
       ],
-      "runtimeArgs": ["--experimental-modules"],
-      "program": "${file}"
+      "program": "${file}",
+      "cwd": "${fileDirname}"
     }
   ]
 }
