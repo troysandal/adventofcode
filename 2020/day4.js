@@ -27,7 +27,7 @@ const passportFields = {
     'hcl': { name: 'hcl', },
     'ecl': { name: 'ecl', },
     'pid': { name: 'pid', },
-    'cid': { name: 'cid', optional: true },
+    'cid': { name: 'cid' },
 }
 
 /*
