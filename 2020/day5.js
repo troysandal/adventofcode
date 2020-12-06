@@ -64,7 +64,7 @@ As a sanity check, look through your list of boarding passes. What is the
 highest seat ID on a boarding pass?
 */
 
-function decordBoardingPass(seatCode) {
+function decodeBoardingPass(seatCode) {
     const pass = {
         row: binaryReduce(seatCode.slice(0, 7)),
         column: binaryReduce(seatCode.slice(7)),
@@ -76,13 +76,13 @@ function decordBoardingPass(seatCode) {
 
 function testPart1() {
     for (let example of part1Examples) {
-        const boardingPass = decordBoardingPass(example.seatCode)
+        const boardingPass = decodeBoardingPass(example.seatCode)
 
         assert(
             example.expected.row === boardingPass.row &&
             example.expected.column === boardingPass.column &&
             example.expected.seatID === boardingPass.seatID,
-            `decordBoardingPass(${example.seatCode})\nActual   ${JSON.stringify(boardingPass)}\nExpected ${JSON.stringify(example.expected)}\n`
+            `decodeBoardingPass(${example.seatCode})\nActual   ${JSON.stringify(boardingPass)}\nExpected ${JSON.stringify(example.expected)}\n`
         )
     }
 }
@@ -140,22 +140,97 @@ var puzzleInput
 
 try {
     console.log(process.cwd())
-    puzzleInput = fs.readFileSync(PART1_INPUT, 'utf8');
+    puzzleInput = fs.readFileSync(PART1_INPUT, 'utf8').trim()
 } catch(e) {
     console.log(`Couldn't load ${PART1_INPUT}:`, e.stack);
     process.exit(-1)
 }
 
-const inputs = puzzleInput.split('\n')
-let maxSeatID = 0
-for (let input of inputs) {
-    const pass = decordBoardingPass(input)
-    // console.log(`'${JSON.stringify(pass)}'`)
-    maxSeatID = Math.max(maxSeatID, pass.seatID)
+function loadPasses() {
+    const passes = []
+    const inputs = puzzleInput.split('\n')
+    for (let input of inputs) {
+        const pass = decodeBoardingPass(input)
+        passes.push(pass)
+    }
+    return passes
+}
+
+function findMaxSeatID() {
+    const passes = loadPasses()
+    let maxSeatID = 0
+    for (let pass of passes) {
+        maxSeatID = Math.max(maxSeatID, pass.seatID)
+    }
+    return maxSeatID
 }
 
 // 1st try - 850
 const part1ExpectedAnswer = 850
-const part1Answer = maxSeatID
+const part1Answer = findMaxSeatID()
 console.log(`Part 1 Answer = ${part1Answer}`)
 assert(part1ExpectedAnswer === part1Answer, `Part 1 Answer is Broken - Expected ${part1ExpectedAnswer} !== ${part1Answer}`)
+
+
+/*
+--- Part Two ---
+Ding! The "fasten seat belt" signs have turned on. Time to find your seat.
+
+It's a completely full flight, so your seat should be the only missing boarding
+pass in your list. However, there's a catch: some of the seats at the very front
+and back of the plane don't exist on this aircraft, so they'll be missing from
+your list as well.
+
+Your seat wasn't at the very front or back, though; the seats with IDs +1 and -1
+from yours will be in your list.
+
+What is the ID of your seat?
+*/
+
+function printSeats() {
+    const passes = loadPasses()
+    passes.sort((a, b) => a.seatID - b.seatID)
+
+    let row = 0
+    let rowString = new Array(8)
+    rowString.fill(' ')
+
+    for (let pass of passes) {
+        if (row !== pass.row) {
+            const rowStr = '' + row
+
+            if (row >= 1) {
+                console.log(`${rowStr.padStart(3, ' ')} ${rowString.join('')}`)
+            }
+            row = pass.row
+            rowString.fill(' ')
+        }
+        rowString[pass.column] = 'X'
+    }
+}
+
+// printSeats()
+// row 74, column 7, seatID 599
+
+function findYourSeat() {
+    const passes = loadPasses()
+    passes.sort((a, b) => a.seatID - b.seatID)
+
+    let walk = passes[0].seatID
+
+    for (let pass of passes) {
+        if (walk !== pass.seatID) {
+            return walk
+        }
+        walk += 1
+    }
+
+    throw 'DOH!'
+}
+
+
+// 1st try - 599
+const part2ExpectedAnswer = 599
+const part2Answer = findYourSeat()
+console.log(`Part 2 Answer = ${part2Answer}`)
+assert(part2ExpectedAnswer === part2Answer, `Part 2 Answer is Broken - Expected ${part2ExpectedAnswer} !== ${part2Answer}`)
